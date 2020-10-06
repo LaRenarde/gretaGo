@@ -9,5 +9,3 @@ puis
 après vous pouvez tester les methodes avec PostMan
 
 Du coup pensez à peupler votre bdd fraichement importée pour avoir des réponses concrètes
-
-![ Image 1](screen.png)
