@@ -4,10 +4,12 @@ const jwt = require('jsonwebtoken')
 require('dotenv').config()
 var Sequelize = require("sequelize");
 const sequelize = require('../db.config')
+const bcrypt = require('bcrypt')
+const checkTokenMiddleware = require('../jsonwebtoken/check')
 
 // CHARGEMENT DU MODEL 
 const Admin = require('../models/admin')(sequelize, Sequelize.DataTypes);
-const User = require('../models/User')(sequelize, Sequelize.DataTypes);
+const User = require('../models/user')(sequelize, Sequelize.DataTypes);
 
 
 // RECUPERATION DU ROUTER D EXPRESS
@@ -21,35 +23,6 @@ router.use(function timelog(req, res, next) {
 })
 
 
-// Récupération du header bearer 
-const extractBearerToken = headerValue => {
-  if (typeof headerValue !== 'string') {
-    return false
-  }
-
-  const matches = headerValue.match(/(bearer)\s+(\S+)/i)
-  return matches && matches[2]
-}
-
-// Vérification du token 
-const checkTokenMiddleware = (req, res, next) => {
-  // Récupération du token
-  const token = req.headers.authorization && extractBearerToken(req.headers.authorization)
-
-  // Présence d'un token
-  if (!token) {
-    return res.status(401).json({ message: 'Error. Need a token' })
-  }
-
-  // Véracité du token
-  jwt.verify(token, process.env.JWT_SECRET, (err, decodedToken) => {
-    if (err) {
-      res.status(401).json({ message: 'Error. Bad token' })
-    } else {
-      return next()
-    }
-  })
-}
 
 //-------------------------------------------
 // login [Post /auth/login]
@@ -62,51 +35,75 @@ router.post('/login', (req, res) => {
     return res.status(400).json({ message: " Login ou mot de passe manquant", error: err })
   }
 
+
   Admin.findAll({ where: { email: req.body.email } })
+
     .then(result => {
+
       // Verification si l'utilisateur existe
+      //----------------------------------------------
       if (result.length === 0) {
+
         User.findAll({ where: { email: req.body.email } })
+
         .then(result => {
+    
           // Verification si l'utilisateur existe
+  
           if (result.length === 0) {
+    
             return res.status(401).json({ message: 'Compte inexistant' })
           }
+    
           //MISE EN FORME DU RESULT
           var user = JSON.parse(JSON.stringify(result))[0]
+    
+    
           //VERIFICATION SI LE MOT DE PASSE EST BON
-          if (user.password !== req.body.password) {
+          if (!bcrypt.compareSync(req.body.password, user.password)) {
             // res.send("Mot de passe incorrect")
             return res.status(400).json({ message: "Mot de passe incorrect" })
           }
+    
           // Création du token
           const token = jwt.sign({
             id: user.id,
             email: user.email,
+    
           }, process.env.JWR_SECRET, { expiresIn: process.env.JWT_DIRING })
+    
+    
           return res.json({ access_token: token,login_user:'user' })
         })
-        .catch(function (err) {
-          return res.status(400).json({ message: "DB err", model })
-        });
+    
+    
+          .catch(err => res.json({ message: 'Database error user', error: err }))
+      
       }
+      //----------------------------------------------
+
       //MISE EN FORME DU RESULT
       var admin = JSON.parse(JSON.stringify(result))[0]
+
+
       //VERIFICATION SI LE MOT DE PASSE EST BON
-      if (admin.password !== req.body.password) {
+      if (!bcrypt.compareSync(req.body.password, admin.password)) {
         // res.send("Mot de passe incorrect")
         return res.status(400).json({ message: "Mot de passe incorrect" })
       }
+
       // Création du token
       const token = jwt.sign({
         id: admin.id,
         email: admin.email,
+
       }, process.env.JWR_SECRET, { expiresIn: process.env.JWT_DIRING })
+
+
       return res.json({ access_token: token,login_user:'admin' })
     })
-    .catch(function (err) {
-      return res.status(400).json({ message: "DB err", model })
-    });
+     // .catch(err => res.json({ message: 'Database error admin', error: err }))
+  
 })
 
 //-------------------------------------------

@@ -9,7 +9,7 @@ const bcrypt = require('bcrypt')
 const checkTokenMiddleware = require('../jsonwebtoken/check')
 
 // CHARGEMENT DU MODEL 
-const User=  require('../models/User')(sequelize, Sequelize.DataTypes);
+const User=  require('../models/user')(sequelize, Sequelize.DataTypes);
 const Training=  require('../models/training')(sequelize, Sequelize.DataTypes);
 const User_has_lift=  require('../models/user_has_lift')(sequelize, Sequelize.DataTypes);
 const Lift=  require('../models/lift')(sequelize, Sequelize.DataTypes);
@@ -143,7 +143,7 @@ router.post('/register', (req, res) => {
           bcrypt.hash(req.body.password, parseInt(process.env.BCRYPT_SALT_ROUND))
           .then(hash => {
               // On a reçu le mot de passe hashé on peut enregistrer le nouveau compte
-             // req.body.password = hash
+              req.body.password = hash
               req.body.created_at=new Date().toISOString().slice(0, 19).replace('T', ' ');;
               req.body.updated_at=new Date().toISOString().slice(0, 19).replace('T', ' ');;
 
